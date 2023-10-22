@@ -2,85 +2,73 @@
 pragma solidity ^0.8.0;
 contract Insurance {
     address[] public policyholders;
-    mapping(address => uint256) public policies;
+    mapping(address => uint256[]) public customerPolicies;
     mapping(address => uint256) public claims;
-    mapping(uint256 => uint256) public availablePolicies;
-    address payable owner;
-    uint256 public totalPremium;
+    mapping(uint256 => availablePolicy) public availablePolicies;
+    address payable insuranceAddress;
 
     struct availablePolicy {
-        uint policyId;
+        uint256 policyAmount;
         uint256 policyPremium;
     }
-    // availablePolicy[] public availablePolicies;
+
 
     constructor() {
-        owner = payable(msg.sender);
+        insuranceAddress = payable(msg.sender);
     }
 
-    function addPolicyToAvailablePolicies(uint _policyId, uint256 _policyPremium) public {
-        availablePolicies[_policyId] = _policyPremium;
+    function addPolicyToAvailablePolicies(uint _policyId, uint256 _policyPremium, uint256 _payoutAmount) public {
+        availablePolicies[_policyId] = availablePolicy(_policyPremium, _payoutAmount);
+    } 
+
+    function sellPolicy(uint256 policyId, address customerAddress) public payable {
+        customerPolicies[customerAddress].push(policyId);
     }
 
-    function purchasePolicy(uint256 policyId) public payable {
-        uint256 premium = availablePolicies[policyId];
-        // require(premium == getPolicyPremium(policyId), "incorrect policy amount");
-        require(premium > 0, "premium amount must be greater than 0.");
-        policyholders.push(msg.sender);
-        policies[msg.sender] = premium;
-        totalPremium += premium;
+    // function approveClaim(address policyholder) public payable {
+    //     require(msg.sender == insuranceAddress, "only the owner can approve claims.");
+    //     require(claims[policyholder] > 0, "policyholder has no outstanding claims");
+    //     payable (policyholder).transfer(claims[policyholder]);
+    //     claims[policyholder] = 0;
 
-    }
+    // }
 
-
-    function fileClaim(uint256 amount) public {
-        require(policies[msg.sender] > 0, "must have a valid policy to file a claim");
-        require(amount > 0, "Claim amount  must be greater than 0.");
-        require(amount <= policies[msg.sender], "Claim amount cannot exceed policy");
-        claims[msg.sender] += amount;
-
-
-    }   
-
-    function approveClaim(address policyholder) public payable {
-        require(msg.sender == owner, "only the owner can approve claims.");
-        require(claims[policyholder]> 0, "policyholder has no outstanding claims");
-        payable (policyholder).transfer(claims[policyholder]);
-        claims[policyholder] = 0;
+    function getCustomerPolicies(address policyHolder) public view returns (uint256[] memory) {
+        return customerPolicies[policyHolder];
 
     }
 
-    function getPolicy(address policyholder) public view returns (uint256) {
-        return policies[policyholder];
+    // function getClaim(address policyHolder) public view returns (uint256) {
+    //     return claims[policyHolder];
+    // }
 
+
+    function getPolicyPremium(uint256 policyId) public view returns (uint256) {
+        return availablePolicies[policyId].policyPremium;
     }
 
-    function getClaim(address policyholder) public view returns (uint256) {
-        return claims[policyholder];
-    }
-
-    function getTotalPremium() public view returns (uint256) {
+    function getTotalPremium(address customerAddress) public view returns (uint256) {
+        uint256 totalPremium = 0;
+        for (uint256 i = 0; i < customerPolicies[customerAddress].length; i++) {
+            totalPremium += getPolicyPremium(customerPolicies[customerAddress][i]);
+        }
         return totalPremium;
     }
 
-    function getPolicyPremium(uint256 policyId) public view returns (uint256) {
-        return availablePolicies[policyId];
-    }
+    // function grantAccess(address payable user) public {
+    //     require(msg.sender == owner, "only the owner can grant access");
+    //     owner = user;
+    // }   
 
-    function grantAccess(address payable user) public {
-        require(msg.sender == owner, "only the owner can grant access");
-        owner = user;
-    }   
-
-    function revokeAccess(address payable user) public {
+    // function revokeAccess(address payable user) public {
        
        
-        require(msg.sender == owner, "only owner ccan revoke access");
-        require(user != owner, "cannot revoke access for current owner");
-        owner = payable(msg.sender);
+    //     require(msg.sender == owner, "only owner ccan revoke access");
+    //     require(user != owner, "cannot revoke access for current owner");
+    //     owner = payable(msg.sender);
 
 
-    }
+    // }
 
 
 }
