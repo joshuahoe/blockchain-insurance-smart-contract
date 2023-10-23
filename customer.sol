@@ -4,33 +4,40 @@ pragma solidity ^0.8.0;
 import "./insurance.sol"; 
 
 contract Customer {
-    address public insuranceProvider;
+    address payable insuranceProviderAddress;
     address payable customerAddress;
-    mapping(address => uint256) public policies;
     mapping(address => uint256) public claims;
     mapping(uint256 => uint256) public customersPolicies; //policyId => policyPremium
+    event Received(address, uint);
     
     
 
-    constructor(address _insuranceProvider) {
-        insuranceProvider = _insuranceProvider;
-        customerAddress = payable(msg.sender);
+    constructor(address payable _insuranceProvider) payable {
+        insuranceProviderAddress = payable(_insuranceProvider);
+        customerAddress = payable(address(this));
     }
 
+     receive() external payable {
+        emit Received(msg.sender, msg.value);
+    }
 
     function purchasePolicy(uint256 policyId) public payable {
-        require(customersPolicies[policyId] == 0, "Customer has already purchased this policy");
-        uint256 premium = Insurance(insuranceProvider).getPolicyPremium(policyId);
+        uint256[] memory lstOfCustomerPolicies = Insurance(insuranceProviderAddress).getCustomerPolicies(customerAddress);
+        if (lstOfCustomerPolicies.length != 0) {
+            for (uint256 i = 0; i < lstOfCustomerPolicies.length; i++) {
+                require(lstOfCustomerPolicies[i] != policyId, "Customer has already purchased this policy");
+            }
+        }
+        uint256 premium = Insurance(insuranceProviderAddress).getPolicyPremium(policyId);
         require(msg.value >= premium, "Insufficient balance to purchase policy");
-        Insurance(insuranceProvider).sellPolicy(policyId, customerAddress);
-        require(payable(insuranceProvider).send(premium), "Payment to insurance contract failed");
+        Insurance(insuranceProviderAddress).sellPolicy(policyId, customerAddress);
+        insuranceProviderAddress.transfer(premium);
     }
 
 
     // function fileClaim(uint256 amount) public {
-    //     require(policies[msg.sender] > 0, "must have a valid policy to file a claim");
+    //     require(insurancePolicies[msg.sender] > 0, "must have a valid policy to file a claim");
     //     require(amount > 0, "Claim amount  must be greater than 0.");
-    //     require(amount <= policies[msg.sender], "Claim amount cannot exceed policy");
     //     claims[msg.sender] += amount;
 
 

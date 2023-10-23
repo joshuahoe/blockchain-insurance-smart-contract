@@ -6,14 +6,18 @@ contract Insurance {
     mapping(address => uint256) public claims;
     mapping(uint256 => availablePolicy) public availablePolicies;
     address payable insuranceAddress;
+    event Received(address, uint);
 
     struct availablePolicy {
-        uint256 policyAmount;
         uint256 policyPremium;
+        uint256 payoutAmount;
     }
 
+    receive() external payable {
+        emit Received(msg.sender, msg.value);
+    }
 
-    constructor() {
+    constructor() payable {
         insuranceAddress = payable(msg.sender);
     }
 
