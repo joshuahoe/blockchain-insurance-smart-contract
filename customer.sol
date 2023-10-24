@@ -19,7 +19,7 @@ contract Customer {
         emit Received(msg.sender, msg.value);
     }
 
-    function purchasePolicy(uint256 policyId) public payable {
+    function requestToPurchasePolicy(uint256 policyId) public payable {
         bool policyPresent = Insurance(insuranceProviderAddress).checkPolicyAvailable(policyId);
         require(policyPresent, "This policy is not available to be purchased!");
         uint256[] memory lstOfCustomerPolicies = Insurance(insuranceProviderAddress).getCustomerPolicies(customerAddress);
@@ -30,17 +30,43 @@ contract Customer {
         }
         uint256 premium = Insurance(insuranceProviderAddress).getPolicyPremium(policyId);
         require(msg.value >= premium, "Insufficient balance to purchase policy");
-        Insurance(insuranceProviderAddress).sellPolicy(policyId, customerAddress);
+        require(Insurance(insuranceProviderAddress).approvePurchasePolicyRequest(policyId, customerAddress), "Customer have to onboard first");
         insuranceProviderAddress.transfer(premium);
     }
 
+    function requestOnboard() public {
+        Insurance(insuranceProviderAddress).approveCustomerOnboard();
+    }
 
-    // function fileClaim(uint256 amount) public {
-    //     require(insurancePolicies[msg.sender] > 0, "must have a valid policy to file a claim");
-    //     require(amount > 0, "Claim amount  must be greater than 0.");
-    //     claims[msg.sender] += amount;
+    function viewAvailablePolicies() public view returns (uint256[] memory) {
+        return Insurance(insuranceProviderAddress).getAllAvailablePoliciesId();
+    }
 
-    // }   
+    function viewPolicyDetails(uint256 policyId) public view returns (Insurance.availablePolicy memory) {
+        return Insurance(insuranceProviderAddress).getAvailablePolicyById(policyId); 
+    }
+
+
+    function fileClaim(uint256 amount, uint256 policyId) public {
+        bool present = false;
+        uint256[] memory lstOfCustomerPolicies = Insurance(insuranceProviderAddress).getCustomerPolicies(customerAddress);
+        require(lstOfCustomerPolicies.length > 0, "Customer does not have any policies to claim");
+        for (uint i = 0; i < lstOfCustomerPolicies.length; i++) {
+            if (lstOfCustomerPolicies[i] == policyId) {
+                present = true;
+            }
+        }
+        require(present, "Customer does not have this policy purchased");
+        uint256 payoutAmount = Insurance(insuranceProviderAddress).getPolicyPremium(policyId);
+        require(amount <= payoutAmount, "Claim amount must be smaller than or equal to policy's payout amount.");
+        Insurance(insuranceProviderAddress).addToOutstandingClaims(amount, customerAddress);
+    }   
+
+    function requestClaimApproval(uint256 amount) public {
+        uint256 outstandingClaims = Insurance(insuranceProviderAddress).getOutstandingClaims(customerAddress);
+        require(amount <= outstandingClaims, "Cannot request for claim more than oustanding claim amount.");
+        Insurance(insuranceProviderAddress).approveClaim(customerAddress, amount);
+    }
 
 
 
