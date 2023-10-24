@@ -2,14 +2,16 @@
 pragma solidity ^0.8.0;
 contract Insurance {
     address[] public policyholders;
+    address[] public customers;
     address payable insuranceAddress;
     mapping(address => uint256[]) public customerPolicies;
-    mapping(address => uint256) public claims;
+    mapping(address => uint256) public outstandingClaims;
     mapping(uint256 => availablePolicy) public availablePolicies;
     event Received(address, uint);
     uint256[] public availablePoliciesIdArray;
 
     struct availablePolicy {
+        string description;
         uint256 policyPremium;
         uint256 payoutAmount;
     }
@@ -22,15 +24,30 @@ contract Insurance {
         insuranceAddress = payable(msg.sender);
     }
 
-    function addPolicyToAvailablePolicies(uint _policyId, uint256 _policyPremium, uint256 _payoutAmount) public {
+    function addPolicyToAvailablePolicies(uint _policyId, uint256 _policyPremium, uint256 _payoutAmount, string memory _description) public {
         require(checkPolicyAvailable(_policyId) == false, "Policy with same ID already exists");
-        availablePolicies[_policyId] = availablePolicy(_policyPremium, _payoutAmount);
+        availablePolicies[_policyId] = availablePolicy(_description, _policyPremium, _payoutAmount);
         availablePoliciesIdArray.push(_policyId);
     }
 
-    function sellPolicy(uint256 policyId, address customerAddress) public payable {
-        addToPolicyHolders(customerAddress);
-        customerPolicies[customerAddress].push(policyId);
+    function approvePurchasePolicyRequest(uint256 policyId, address customerAddress) public payable returns (bool) {
+        bool approved = false;
+        for (uint i = 0; i < customers.length; i++) {
+            if (customers[i] == customerAddress) {
+                approved = true;
+            }
+        }
+        if (approved) {
+            addToPolicyHolders(customerAddress);
+            customerPolicies[customerAddress].push(policyId);
+        }
+
+        return approved;
+        
+    }
+
+    function approveCustomerOnboard() public {
+        customers.push(msg.sender);
     }
 
     function getCustomerPolicies(address policyHolder) public view returns (uint256[] memory) {
@@ -39,6 +56,10 @@ contract Insurance {
 
     function getPolicyPremium(uint256 policyId) public view returns (uint256) {
         return availablePolicies[policyId].policyPremium;
+    }
+
+    function getPolicyPayoutAmount(uint256 policyId) public view returns (uint256) {
+        return availablePolicies[policyId].payoutAmount;
     }
 
     function getTotalPremium(address customerAddress) public view returns (uint256) {
@@ -83,16 +104,23 @@ contract Insurance {
         return policyPresent;
     }
 
+    function addToOutstandingClaims(uint256 claimAmount, address customerAddress) public {
+        outstandingClaims[customerAddress] += claimAmount;
+    }
+
+    function approveClaim(address payable customerAddress, uint256 claimAmount) public payable {
+        require(msg.sender == insuranceAddress, "only the Insurance Provider can approve claims.");
+        customerAddress.transfer(claimAmount);
+        outstandingClaims[customerAddress] -= claimAmount;
+
+    }
+
+    function getOutstandingClaims(address customerAddress) public view returns (uint256) {
+        return outstandingClaims[customerAddress];
+    }
+
     // function getClaim(address policyHolder) public view returns (uint256) {
     //     return claims[policyHolder];
-    // }
-
-    // function approveClaim(address policyholder) public payable {
-    //     require(msg.sender == insuranceAddress, "only the owner can approve claims.");
-    //     require(claims[policyholder] > 0, "policyholder has no outstanding claims");
-    //     payable (policyholder).transfer(claims[policyholder]);
-    //     claims[policyholder] = 0;
-
     // }
 
     // function grantAccess(address payable user) public {
