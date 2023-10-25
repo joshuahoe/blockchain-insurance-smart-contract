@@ -2,12 +2,12 @@
 pragma solidity ^0.8.0;
 contract Insurance {
     address payable insuranceAddress; // address variable that holds the address of this contract
-    address[] public policyholders; // array to hold the address of customers who purchase a policy
-    address[] public customers; // array to hold the address of customers who onboard with this insurance provider
-    mapping(address => uint256[]) public customerPolicies; // a mapping of customer addresses to an array of policies they have
-    mapping(address => uint256) public outstandingClaims; // a mapping of customer addresses to the amount of claims that are outstanding
-    mapping(uint256 => availablePolicy) public availablePolicies; // a mapping of a policy's id to its policy details
-    uint256[] public availablePoliciesIdArray; // an array to hold the ids of policies added by the insurance provider
+    address[] private policyholders; // array to hold the address of customers who purchase a policy
+    address[] private customers; // array to hold the address of customers who onboard with this insurance provider
+    mapping(address => uint256[]) private customerPolicies; // a mapping of customer addresses to an array of policies they have
+    mapping(address => uint256) private outstandingClaims; // a mapping of customer addresses to the amount of claims that are outstanding
+    mapping(uint256 => availablePolicy) private availablePolicies; // a mapping of a policy's id to its policy details
+    uint256[] private availablePoliciesIdArray; // an array to hold the ids of policies added by the insurance provider
     event Received(address, uint); // an event to be emitted when any funds is received by this contract
 
     // a struct defined to store an available policy's details
