@@ -7,8 +7,8 @@ contract Insurance {
     mapping(address => uint256[]) public customerPolicies;
     mapping(address => uint256) public outstandingClaims;
     mapping(uint256 => availablePolicy) public availablePolicies;
-    event Received(address, uint);
     uint256[] public availablePoliciesIdArray;
+    event Received(address, uint);
 
     struct availablePolicy {
         string description;
@@ -47,6 +47,13 @@ contract Insurance {
     }
 
     function approveCustomerOnboard() public {
+        bool customerOnboarded = false;
+        for (uint i = 0; i < customers.length; i++) {
+            if (customers[i] == msg.sender) {
+                customerOnboarded = true;
+            }
+        }
+        require(!customerOnboarded, "Customer already onboarded!");
         customers.push(msg.sender);
     }
 
@@ -89,7 +96,8 @@ contract Insurance {
     }
 
     function getAvailablePolicyById(uint256 policyId) public view returns (availablePolicy memory) {
-        require(availablePoliciesIdArray.length != 0, "No policies available");
+        require(availablePoliciesIdArray.length != 0, "No policies available yet!");
+        require(checkPolicyAvailable(policyId), "No such policy available!");
         return availablePolicies[policyId];
     }
 
@@ -108,8 +116,19 @@ contract Insurance {
         outstandingClaims[customerAddress] += claimAmount;
     }
 
+    function handleApproveClaim(address payable customerAddress, uint256 claimAmount) public payable {
+        bool customerIsPolicyHolder = false;
+        for (uint i = 0; i < policyholders.length; i++) {
+            if (policyholders[i] == customerAddress) {
+                customerIsPolicyHolder = true;
+            }
+        }
+
+        require(customerIsPolicyHolder, "Customer cannot make claim if not policy holder!");
+        approveClaim(customerAddress, claimAmount);
+    }
+
     function approveClaim(address payable customerAddress, uint256 claimAmount) public payable {
-        require(msg.sender == insuranceAddress, "only the Insurance Provider can approve claims.");
         customerAddress.transfer(claimAmount);
         outstandingClaims[customerAddress] -= claimAmount;
 
@@ -119,9 +138,6 @@ contract Insurance {
         return outstandingClaims[customerAddress];
     }
 
-    // function getClaim(address policyHolder) public view returns (uint256) {
-    //     return claims[policyHolder];
-    // }
 
     // function grantAccess(address payable user) public {
     //     require(msg.sender == owner, "only the owner can grant access");
