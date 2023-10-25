@@ -6,7 +6,6 @@ import "./insurance.sol";
 contract Customer {
     address payable insuranceProviderAddress;
     address payable customerAddress;
-    mapping(address => uint256) public claims;
     mapping(uint256 => uint256) public customersPolicies; //policyId => policyPremium
     event Received(address, uint);
 
@@ -46,6 +45,10 @@ contract Customer {
         return Insurance(insuranceProviderAddress).getAvailablePolicyById(policyId); 
     }
 
+    function viewOutstandingClaims(address policyHolder) public view returns (uint256) {
+        return Insurance(insuranceProviderAddress).getOutstandingClaims(policyHolder);
+    }
+
 
     function fileClaim(uint256 amount, uint256 policyId) public {
         bool present = false;
@@ -57,15 +60,16 @@ contract Customer {
             }
         }
         require(present, "Customer does not have this policy purchased");
-        uint256 payoutAmount = Insurance(insuranceProviderAddress).getPolicyPremium(policyId);
+        uint256 payoutAmount = Insurance(insuranceProviderAddress).getPolicyPayoutAmount(policyId);
         require(amount <= payoutAmount, "Claim amount must be smaller than or equal to policy's payout amount.");
         Insurance(insuranceProviderAddress).addToOutstandingClaims(amount, customerAddress);
     }   
 
     function requestClaimApproval(uint256 amount) public {
         uint256 outstandingClaims = Insurance(insuranceProviderAddress).getOutstandingClaims(customerAddress);
+        require(amount > 0, "Claim amount must be more than 0");
         require(amount <= outstandingClaims, "Cannot request for claim more than oustanding claim amount.");
-        Insurance(insuranceProviderAddress).approveClaim(customerAddress, amount);
+        Insurance(insuranceProviderAddress).handleApproveClaim(customerAddress, amount);
     }
 
 
